@@ -51,6 +51,40 @@ You get, among other things:
 
 That is arithmetic. Nothing imported TensorFlow to produce it.
 
+## 1b. The other direction: what should you build?
+
+Section 1 answers "what does this cost?". The inverse question is usually the
+one you have:
+
+```python
+import axiomrnn as ax
+
+best, too_big = ax.largest_that_fits(6.0)     # vram_gb in GiB
+print(best.explain())                        # largest that fits
+print(too_big.explain())                     # the boundary, if one exists
+```
+
+Three fields earn their keep:
+
+- `binding` names which term dominates — `static`, `tape`, `backward`,
+  `logits`, `workspace`. If it says `static`, the **weights** dominate, so
+  the credit rule and the spike coding save you nothing on this budget and
+  width is the only lever. That single word saves a wasted afternoon.
+- The second object is the smallest configuration that does **not** fit, so
+  you can see the overshoot before you spend the day discovering it.
+- `bytes_per_param` is printed next to the synapse count, because
+  "2.1 billion synapses" means nothing without it.
+
+Both may be `None`, and that is not an error: `None` for `best` means nothing
+in the searched space fits; `None` for `too_big` means the answer sits on the
+search ceiling and there is no boundary above it inside the space. Neither
+case is papered over.
+
+It is a **capacity** answer. This package has no verified quality model, so
+it does not rank architectures by accuracy — `ax.local_quality()` is the one
+quality figure it carries, it is read from a cited measurement, and it
+returns `None` outside its measured range instead of extrapolating.
+
 ## 2. Your first network
 
 ```python

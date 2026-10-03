@@ -450,6 +450,11 @@ def explain_budget(model: Model, budget: Budget, batch: int = 32,
     A("    whether spiking is FASTER on a GPU")
     A("    the original promise 'spikes save memory' -- REFUTED by")
     A("      measurement; the value is in the credit planner, not the bit")
+    A("")
+    A("  This report answers 'what does THIS network cost?'. For the")
+    A("  inverse question -- the largest network this budget can train,")
+    A("  and what exactly stops the next step up -- use:")
+    A("      ax.largest_that_fits(vram_gb)   or   ax.capacity_report(vram_gb)")
 
     A("")
     A("=" * 74)

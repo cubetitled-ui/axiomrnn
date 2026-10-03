@@ -1,3 +1,21 @@
+> **Status (2026-10-03).** An independent design analysis, written as a
+> design workspace document. It is **not** package documentation, and it was
+> produced by a separate investigation, not by the framework's own gate.
+>
+> Two things a reader should know before quoting it:
+>
+> 1. Where it cites this project's recorded measurements (for example the
+>    spiking-vs-dense parity figures in §7), those are **historical run
+>    values**. The figures move between runs — `examples/04_equal_budget.py`
+>    prints the current ones, and its threshold sweep in the same run varies
+>    by more than the spiking-vs-dense gap. Quote the script, not the number.
+> 2. Its own `[MEASURED]` tags mean "measured by that investigation", not
+>    "verified by this framework's gate". The derivations are the substance
+>    here: the conditional SETH impossibility, the TC⁰ containment, and the
+>    event-sparse backward-tape argument in §2.4.
+
+---
+
 # ATTACKING THE QUADRATIC — Event-Gated Delta Memory (EGDM)
 
 Design workspace document, axiomrnn. Mission framing: find the mechanism most likely to remove

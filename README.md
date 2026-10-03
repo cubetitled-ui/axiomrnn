@@ -88,6 +88,41 @@ the inverse question — *what is the largest network this budget can train?*
 
 Full list with measured results: [`examples/README.md`](examples/README.md).
 
+## The inverse question
+
+Every other tool answers *"what does this network cost?"*. This one answers
+the question you actually have — *"I have this much memory; what is the
+largest network I can train, and what stops me from one step further?"*
+
+```python
+import axiomrnn as ax
+
+best, too_big = ax.largest_that_fits(6.0)      # vram_gb, in GiB
+print(best.explain())        # largest that fits
+print(too_big.explain())     # the boundary, verified not assumed
+```
+
+It is pure arithmetic over the verified memory model, so it runs with **no
+TensorFlow installed**. It reports three things a forward-only report cannot:
+
+- **the binding term** — weights, tape, backward, logits or workspace. That
+  tells you which knob is worth turning; if the weights dominate, the credit
+  rule and the spike coding buy you nothing, and the tool says so;
+- **the failure boundary** — the smallest step up that does *not* fit, with
+  the overshoot factor. A tool that only reports successes cannot be told
+  apart from a tool that is simply optimistic;
+- **refusal** — `None` when nothing in the searched space fits, and no
+  invented boundary when the answer sits on the search ceiling.
+
+One caveat it states in its own output: this is a **capacity** answer, not a
+quality one. This package has no verified quality model, and the one quality
+figure it does carry — what the local credit rule costs — is printed next to
+the capacity gain, because a capacity number without its price is a sales
+pitch.
+
+`examples/advanced/15_what_to_build.py` walks through all of it, on CPU, with
+no GPU and no TensorFlow.
+
 ## Documentation
 
 | | |
