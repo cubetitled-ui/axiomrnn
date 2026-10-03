@@ -58,22 +58,27 @@ def main():
     # ── 2. the numpy core under a fixed seed ─────────────────────────────────
     print("  2. THE NUMPY CORE")
     print("  " + "-" * 74)
-    from axon.lif import lif_forward
+    from axon.lif import SpikingNet
 
+    # One seed fixes the weights, the input and the thresholds together, so a
+    # second run with the same seed is the same network on the same data.
+    # dims is [din, hidden..., dout], so [12, 16, 10] is a single hidden layer.
     def run(seed):
         rng = np.random.default_rng(seed)
-        x = rng.normal(0, 1, (4, 12, 8)).astype(np.float32)
-        w = rng.normal(0, 0.3, (8, 16)).astype(np.float32)
-        return lif_forward(x, w, np.full(16, 0.6, np.float32), leak=0.9)[0]
+        net = SpikingNet([12, 16, 10], leak=0.9, rng=rng)
+        x = rng.normal(0, 1, (4, 12))
+        _, _, cache = net.forward(x, 8)
+        return cache[0][1]                        # (T=8, B=4, 16) spikes
 
     a, b = run(7), run(7)
     same_core = np.array_equal(a, b)
     print(f"     same seed twice, identical spikes: {same_core}")
     c = run(8)
     print(f"     different seed, different spikes: {not np.array_equal(a, c)}")
+    print(f"     spikes returned: {a.shape}, firing rate {a.mean():.4f}")
     print()
-    print("     This is the layer worth trusting: fixed weights in, exact")
-    print("     spikes out, no hidden state.")
+    print("     This is the layer worth trusting: seeded weights in, exact")
+    print("     spikes out, no hidden state and no global RNG to disturb.")
     print()
 
     # ── 3. a Keras layer is NOT reproducible across builds ───────────────────

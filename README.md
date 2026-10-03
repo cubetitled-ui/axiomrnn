@@ -152,9 +152,20 @@ python3 tests/run_all.py
   [  OK  ] EXAMPLE 01 (train a network)
   [  OK  ] EXAMPLE 03 (custom neuron, no fork)
   [  OK  ] EXAMPLE 05 (T9 next-word prediction)
-  [  OK  ] ADV 01..06
+  [  OK  ] ADV 01 (embedding + stacked layers)
+  [  OK  ] ADV 02 (horizon sweep)
+  [  OK  ] ADV 03 (credit rule, the real lever)
+  [  OK  ] ADV 04 (budget, codec, precision)
+  [  OK  ] ADV 05 (segmentation planner)
+  [  OK  ] ADV 06 (devices: CPU and GPU)
+  [  OK  ] CAPACITY SOLVER (axplan.solve)
+  [  OK  ] ADV 15 (what to build: the inverse question)
   ALL GREEN. Results may be published.
 ```
+
+Twenty suites. The last two are the newest: the capacity solver, whose
+boundary claim is checked by re-evaluating the memory model independently and
+by refusing to invent a boundary when the answer sits on the search ceiling.
 
 The gate is not optional. No result is published until it is green — a rule
 we adopted after three consecutive experiments looked convincing and were
