@@ -1,0 +1,111 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PEP 621: всё про метаданные — здесь. Старый setup.py не нужен и вреден:
+# он раздваивает источник правды (имя, версия, зависимости живут в двух
+# местах, и через полгода они расходятся).
+# ─────────────────────────────────────────────────────────────────────────────
+[project]
+name = "axiomrnn"
+version = "0.1.0"
+description = "Design networks for the memory budget you have: a pure-python planner, plus an extendable recurrent/spiking kernel with verified gradients"
+readme = "README.md"
+requires-python = ">=3.10"
+# SPDX-выражение вместо классификатора: классификатор License :: OSI
+# Deprecated начиная с PEP 639, и сборка об этом предупреждает.
+license = "MIT"
+license-files = ["LICENSE"]
+# "neuroscience" was here and was removed: the package does not model
+# neuroscience. The neuron is a leaky integrator with a threshold -- an
+# engineering abstraction, not Hodgkin-Huxley, with no ion channels.
+keywords = [
+    "spiking-neural-networks", "recurrent-neural-networks",
+    "memory-planning", "keras", "tensorflow", "neuromorphic",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ЯДРО — ТОЛЬКО ЧИСЛА.
+#
+# Это не украшение: axplan (память, планировщик, правила кредита, explain)
+# не импортирует TensorFlow вообще. Проверяется фактом -- планировщик
+# работает на машине без GPU-стека, и на нём же запускается examples/02.
+# Поэтому требовать TF от того, кто хочет посчитать бюджет, — ошибка.
+# ─────────────────────────────────────────────────────────────────────────────
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# Обучение и сборка в Keras. Ставится как:  pip install axiomrnn[tf]
+tf = [
+    "tensorflow>=2.16",
+]
+# То же, но с CUDA. Версию CUDA выбирает TensorFlow, а не пакет.
+tf-gpu = [
+    "tensorflow[and-cuda]>=2.16",
+]
+dev = [
+    "pytest>=7.4",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ТОЧКА ВХОДА ОДНА.
+#
+# import axiomrnn as ax
+#     ax.Model(...)      архитектура
+#     ax.Budget(...)     бюджет памяти
+#     ax.explain(...)    «что ты можешь выучить»
+#
+# axplan / axtf / axon — внутренние пакеты. Они доступны (для расширения),
+# но документированный интерфейс — axiomrnn.
+# ─────────────────────────────────────────────────────────────────────────────
+[project.scripts]
+axiomrnn-explain = "axiomrnn:main_explain"
+
+[project.urls]
+Documentation = "https://github.com/timatigoogl3-code/axiomrnn#readme"
+Source = "https://github.com/timatigoogl3-code/axiomrnn"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# УПАКОВКА.
+#
+# Flat layout, deliberately: axplan / axtf / axon sit next to each other and
+# import as top-level. A move under src/ would break every sys.path insert in
+# the examples and tests. Rule §9 of docs/UX_RULES.md: failures are owned,
+# not dressed up as elegance.
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.setuptools]
+py-modules = ["axiomrnn"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["axplan*", "axtf*", "axon*"]
+exclude = ["tests*", "examples*", "docs*", "axcore*"]
+
+[tool.setuptools.package-data]
+"axtf" = ["*.md"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ПАРАМЕТРЫ КАЧЕСТВА. Без них «проверено одной командой» ничего не значит.
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+# Предупреждения TF о наших собственных слоях -- НЕ ошибки. Но RuntimeWarning
+# из compute_output_spec означает потерю формы, и её мы хотим видеть.
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+]
