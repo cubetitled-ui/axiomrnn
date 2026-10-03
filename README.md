@@ -128,7 +128,7 @@ no GPU and no TensorFlow.
 | | |
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | what we deliberately do NOT build, and the four packages |
-| [`docs/UX_RULES.md`](docs/UX_RULES.md) | 19 rules, each grown from a specific failure |
+| [`docs/UX_RULES.md`](docs/UX_RULES.md) | 20 rules, each grown from a specific failure |
 | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) | install, first model, first budget |
 | [`docs/ATTACKING_THE_QUADRATIC.md`](docs/ATTACKING_THE_QUADRATIC.md) | an independent attack on the premise: replacing the KV cache with a spike-gated fast-weight state |
 | [`docs/DESIGN_LOG.md`](docs/DESIGN_LOG.md) | the original design record (Russian, unedited) |

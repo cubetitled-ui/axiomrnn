@@ -23,6 +23,8 @@ rule it was supposed to enforce. Three substantive changes:
   nobody could regenerate.
 - **§19 added** after the capacity solver shipped a recommendation and an
   "overflow" that contradicted each other.
+- **§20 added** after a research harness was found to contain eight defects
+  that all flattered the hypothesis it was built to test.
 
 ---
 
@@ -447,6 +449,53 @@ filter was applied to confirm the test fails without it, in line with §14.
 
 ---
 
+## 20. Agreement is the claim that needs proof, not failure
+
+**Rule.** Verification effort is **asymmetric**. A result you expected to fail
+is self-verifying: if the code is broken, it fails. A result you expected to
+pass needs adversarial checking before it is believed. Concretely: before
+believing that a check agrees, prove the check *can* disagree — and prove that
+on the code you actually care about, not on a stripped-down variant of it.
+
+Two corollaries that have both caught real errors here:
+
+- a measurement that returns an identical value everywhere has not measured
+  anything, and must not print a precision claim beneath itself;
+- a defect tends to point the way the author was hoping. Audit for
+  defects that would *create* the expected result before auditing for ones that
+  would break it.
+
+**Accident 1 — the framework's own.** The `norm_t` test could not fail by
+construction (§14), and the membrane-derivative check reported `rel.err = 0.98`
+on **correct** code because finite differences cannot see a discontinuity
+(§17). In both cases the check was green-or-red for a reason unrelated to the
+property it claimed to test.
+
+**Accident 2 — the wider research programme.** A harness built to test whether
+noise helps inference contained **eight defects that flattered that
+hypothesis**. One removed the element whose *value* equalled a random index
+rather than the element *at* that index, so the working set grew without bound
+and reported a figure of `40.0` against a true optimum of `6.6505`. Another
+made the "exact optimum" enumerator take ~1.8 days per instance, so **no exact
+optimum had ever been computed** and the previous result was not reproducible
+at all. A third assumed the objective matrix was symmetric; it was not, which
+crippled the *baseline* and flattered the method under test.
+
+**What the author did with this, and why it is the standard here.** The entire
+suite was rewritten. Three of the report's own prior claims were falsified by
+its own data and corrected in place rather than deleted. Nine of ten
+pre-registered kill criteria fired. The negative result that came out is
+trustworthy *because* the bias was found first — a bias found after a positive
+result is usually rationalised away.
+
+**Check:** this rule is verified by the same mechanism as §14 — sabotage the
+implementation in the direction that favours the claim, and confirm the check
+fails. `tests/test_solve.py` was validated that way (the boundary filter was
+removed and the test failed), and so was the A06 closed-form result (re-run,
+byte-identical output, no discrepancy).
+
+---
+
 ## Summary: what makes this framework trustworthy to a user
 
 | Property | How it is enforced |
@@ -461,3 +510,4 @@ filter was applied to confirm the test fails without it, in line with §14.
 | Testable without trusting the test | §14 break-it-and-look, §16 the kernel asks the cell |
 | Honest when a tool is useless | §15 the planner says "no cuts" |
 | Self-consistent | §19 a limit and its recommendation are on the same axis |
+| Agreement is earned | §20 prove the check can disagree, before believing that it agreed |
