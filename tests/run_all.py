@@ -81,6 +81,35 @@ SUITES = [
     ("ADV 15 (what to build: the inverse question)",
      ["python3", "-W", "ignore",
       "examples/advanced/15_what_to_build.py"], False),
+    # ADV 07-14 were outside this gate until 2026-10-03, and they rotted:
+    # 08_reproducibility.py called axon.lif.lif_forward, a function that has
+    # never existed, and nothing noticed for the lifetime of the file. An
+    # example nobody runs lies -- so every example is now a suite.
+    ("ADV 07 (silence diagnosis)",
+     [TF_PY, "-W", "ignore",
+      "examples/advanced/07_silence_diagnosis.py"], True),
+    ("ADV 08 (reproducibility)",
+     [TF_PY, "-W", "ignore",
+      "examples/advanced/08_reproducibility.py"], True),
+    ("ADV 09 (API tour)",
+     [TF_PY, "-W", "ignore", "examples/advanced/09_api_tour.py"], True),
+    ("ADV 10 (save and load)",
+     [TF_PY, "-W", "ignore", "examples/advanced/10_save_and_load.py"], True),
+    ("ADV 11 (derivative hooks)",
+     [TF_PY, "-W", "ignore",
+      "examples/advanced/11_derivative_hooks.py"], True),
+    ("ADV 12 (failure modes)",
+     [TF_PY, "-W", "ignore",
+      "examples/advanced/12_failure_modes.py"], True),
+    ("ADV 13 (when not to use)",
+     ["python3", "-W", "ignore",
+      "examples/advanced/13_when_not_to_use.py"], False),
+    ("ADV 14 (budget matrix)",
+     ["python3", "-W", "ignore",
+      "examples/advanced/14_budget_matrix.py"], False),
+    # ADV 15 sits above with the planning examples; the TF set 07-12 follows
+    # it so a TF-less machine reports SKIP on one contiguous block instead of
+    # on eight scattered lines.
 ]
 
 
