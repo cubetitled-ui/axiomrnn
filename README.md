@@ -241,6 +241,14 @@ Full account, including the mistakes made while finding all four:
   the budget is simply infeasible.
 - Not measured: the sparse/bit crossover (by anyone), energy savings (no
   neuromorphic device on this machine), and whether spiking is *faster*.
+- **Modelled energy and measured wall-clock dissociate.** An independent audit
+  of the five most-cited "spiking beats dense" results found them inside a
+  single run on a single network: modelled energy 11.90x better, batch-1
+  latency 5.94x worse. Every modelled energy claim — this package's bit-packing
+  result included — is a statement about operation counts, and operation counts
+  are not latency. Only one audited claim survived on **measured** silicon
+  power, and its accuracy claim did not survive with it. See
+  `../neuroarch/B13_fair_comparison_protocol/REPORT.md`.
 
 ## License
 
