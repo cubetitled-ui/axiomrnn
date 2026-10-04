@@ -83,6 +83,19 @@ SUITES = [
      ["/usr/bin/env", "AX_FAST=1", TF_PY, "-W", "ignore",
       "examples/06_gpu_vs_cpu.py"], True,
      ["TRAINING ON CPU", "COMPARISON"]),
+    # Generation, not classification: the model's own output is fed back to it one
+    # token at a time. The markers are the accuracy line and the generation
+    # section, because a run that trained and then produced no text would
+    # otherwise pass on exit code alone.
+    #
+    # AX_FAST keeps the whole pipeline -- train, sample at three temperatures,
+    # score against a unigram baseline -- and only shortens training. The
+    # bit-per-word figure it prints is not the one to quote; run the file
+    # yourself for that.
+    ("EXAMPLE 07 (train, then generate text)",
+     ["/usr/bin/env", "AX_FAST=1", TF_PY, "-W", "ignore",
+      "examples/07_generate.py"], True,
+     ["test accuracy", "unigram bits/word", "GENERATION"]),
     # T9 trains a real language model on 115k words. It is the slowest
     # suite here, so it runs last; if it times out the rest already ran.
     ("EXAMPLE 05 (T9 next-word prediction)",
