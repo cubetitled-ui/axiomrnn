@@ -9,9 +9,9 @@ breaks the optimality "in memory".
 We also compare against a GREEDY algorithm (as in memopt), so there is a
 reproducible number for "how much do we win over greedy".
 """
-import sys
-import random
 import os
+import random
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from axplan.planner import (Segment, plan_partition, exact_peak,   # noqa

@@ -126,8 +126,13 @@ def test_memory_api():
 # ══════════════════════════════════════════════ axplan: planner ════════════
 
 def test_planner_api():
-    from axplan.planner import (Segment, PartitionPlan, plan_partition,
-                                exact_peak, brute_force)
+    from axplan.planner import (
+        PartitionPlan,
+        Segment,
+        brute_force,
+        exact_peak,
+        plan_partition,
+    )
     GIB = 1 << 30
     for fn in (plan_partition, exact_peak, brute_force):
         check(f"planner.{fn.__name__} is not a stub", not no_stub(fn),
@@ -305,7 +310,8 @@ def test_axiomrnn_api():
 
 def test_axon_api():
     import numpy as np
-    from axon.lif import SpikingNet, ssur, dsig, dsig2
+
+    from axon.lif import SpikingNet, dsig, dsig2, ssur
 
     for fn in (ssur, dsig, dsig2):
         check(f"axon.{fn.__name__} is not a stub", not no_stub(fn), no_stub(fn))
@@ -372,9 +378,9 @@ def test_axtf_api():
         skip("axtf API surface", f"no TensorFlow: {e}")
         return
 
-    from axtf.cells import SpikingCell, SpikingRNNCell
-    from axtf.build import build_keras, calibrate_model, measure_model
     import axiomrnn as ax
+    from axtf.build import build_keras, calibrate_model, measure_model
+    from axtf.cells import SpikingCell, SpikingRNNCell
 
     for fn in (build_keras, calibrate_model, measure_model):
         check(f"axtf.{fn.__name__} is not a stub", not no_stub(fn), no_stub(fn))

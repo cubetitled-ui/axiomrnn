@@ -28,41 +28,89 @@ Layers know TF through axtf; the planner (axplan) does not know TF at all.
 """
 from __future__ import annotations
 
+from axplan.credit import local_quality
+
 # axplan -- TF-free part: memory, planning, explanation
 from axplan.memory import (
-    BudgetSpec, MemoryPlan, Regime, Precision, CreditModel,
-    analyse, best_codec, Codec, activation_bytes,
-    SPARK_RATE_BAND, SPARK_RATE_NEURON, SPARK_RATE_DEFAULT,
+    SPARK_RATE_BAND,
+    SPARK_RATE_DEFAULT,
+    SPARK_RATE_NEURON,
+    BudgetSpec,
+    Codec,
+    CreditModel,
+    MemoryPlan,
+    Precision,
+    Regime,
+    activation_bytes,
+    analyse,
+    best_codec,
 )
 from axplan.planner import (
-    Segment, PartitionPlan, plan_partition, exact_peak, brute_force,
+    PartitionPlan,
+    Segment,
+    brute_force,
+    exact_peak,
+    plan_partition,
 )
 from axplan.solve import (
-    Candidate, largest_that_fits, frontier as capacity_frontier,
+    Candidate,
+    largest_that_fits,
+)
+from axplan.solve import (
+    frontier as capacity_frontier,
+)
+from axplan.solve import (
     report as capacity_report,
 )
-from axplan.credit import local_quality   # noqa: F401  (re-exported)
 
 # axtf -- the only layer that knows about TensorFlow
+#
+# Two audiences meet at import time, and they need different things.
+#
+# The memory-planning half (axplan, axon) runs on numpy alone and is imported
+# unconditionally above: planning a model's footprint must not require a deep
+# learning framework to be installed first.
+#
+# The spiking half needs TensorFlow. axtf owns that dependency and owns the
+# wording of the advice, so the guidance is written once, in axtf, and imported
+# here rather than restated -- two copies of an install command drift apart and
+# one of them ends up lying.
 try:
-    from axtf.cells import SpikingCell, SpikingRNNCell
-    _HAS_TF = True
-    _TF_ERR = ""
-except Exception as e:                      # pragma: no cover
-    SpikingCell = None
-    SpikingRNNCell = None
+    from axtf import HAS_TF as _HAS_TF
+    from axtf import TF_ERROR as _TF_ERR
+    from axtf import SpikingCell, SpikingRNNCell
+except Exception as _e:                     # pragma: no cover
+    # axtf itself failed to import, which is a different fault from TensorFlow
+    # being absent. Do not mask it as a missing dependency.
     _HAS_TF = False
-    _TF_ERR = str(e)
+    _TF_ERR = str(_e)
 
 __all__ = [
-    "Model", "Budget", "SpikingCell", "SpikingRNN", "Dense",
-    "SpikingRNNCell", "explain_budget",
-    "Segment", "plan_partition", "exact_peak",
-    "BudgetSpec", "MemoryPlan", "Regime", "analyse", "best_codec",
-    "SPARK_RATE_BAND", "SPARK_RATE_NEURON", "SPARK_RATE_DEFAULT",
-    "Candidate", "largest_that_fits", "capacity_frontier", "capacity_report",
+    "GIB",
+    "SPARK_RATE_BAND",
+    "SPARK_RATE_DEFAULT",
+    "SPARK_RATE_NEURON",
+    "Budget",
+    "BudgetSpec",
+    "Candidate",
+    "Dense",
+    "MemoryPlan",
+    "Model",
+    "Regime",
+    "Segment",
+    "SpikingCell",
+    "SpikingRNN",
+    "SpikingRNNCell",
+    "analyse",
+    "best_codec",
+    "capacity_frontier",
+    "capacity_report",
+    "exact_peak",
+    "explain_budget",
+    "gate_report",
+    "largest_that_fits",
     "local_quality",
-    "gate_report", "GIB",
+    "plan_partition",
 ]
 
 GIB = 1 << 30
@@ -175,6 +223,41 @@ class SpikingRNN:
                 f"norm_t={self.norm_t}, k={self.credit_k})")
 
 
+def _split_layer_kwargs(layer_cls, candidates: dict):
+    """Split `candidates` into the names `layer_cls` accepts and the ones it does not.
+
+    A framework should answer "which settings does this layer take?" rather than
+    forward everything and let a later line fail. Reading the signature is the
+    only honest source: it cannot drift from the constructor the way a
+    hand-maintained list would.
+    """
+    import inspect
+
+    params = inspect.signature(layer_cls.__init__).parameters
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        return dict(candidates), {}
+    accepted = {k: v for k, v in candidates.items() if k in params}
+    rejected = {k: v for k, v in candidates.items() if k not in params}
+    return accepted, rejected
+
+
+def _layer_kwargs_help(layer_cls) -> str:
+    """Human-readable list of the keyword arguments a layer accepts.
+
+    Every real parameter has a default, so filtering on "has no default" would
+    report an empty list -- which is worse than no message, because it reads as
+    "this layer takes nothing". List what it takes.
+    """
+    import inspect
+
+    params = inspect.signature(layer_cls.__init__).parameters
+    names = [n for n, p in params.items()
+             if n != "self"
+             and p.kind not in (inspect.Parameter.VAR_KEYWORD,
+                                inspect.Parameter.VAR_POSITIONAL)]
+    return ", ".join(names) if names else "(none)"
+
+
 class Model:
     """Minimal model layer on top of Keras/TF.
 
@@ -221,8 +304,32 @@ class Model:
         simply did not work through the public API.
         """
         merged = {**self.layer_kw, **kw}
+        # Keep only what this layer can actually take.
+        #
+        # Model stores every unknown keyword in `layer_kw` so that one set of
+        # defaults applies to all layers. Layers, however, have fixed
+        # signatures -- SpikingRNN takes units/horizon/leak/alpha/cell and no
+        # **kwargs -- so blindly forwarding turns `Model(vocab=64, dim=32)`
+        # followed by `add_spiking(16)` into "unexpected keyword argument
+        # 'vocab'". The names a user passes to Model() are model-level
+        # settings, and silently dropping them is worse than refusing: a layer
+        # built with the wrong width looks like it worked.
+        accepted, rejected = _split_layer_kwargs(SpikingRNN, merged)
+        if rejected:
+            valid = _layer_kwargs_help(SpikingRNN)
+            raise TypeError(
+                f"add_spiking() cannot use {sorted(rejected)}; SpikingRNN does "
+                f"not take {'them' if len(rejected) > 1 else 'it'}.\n"
+                f"SpikingRNN accepts: {valid}\n\n"
+                "Model() stores unrecognised keywords as defaults for every "
+                "layer, so a name meant for one layer will reach another. Pass "
+                "layer settings directly instead:\n"
+                "    spec.add_spiking(16, horizon=8)\n"
+                "and model-wide settings where they belong -- the vocabulary "
+                "size belongs to the model, not to a recurrent layer."
+            )
         # precedence: an explicit cell argument beats the model-wide cell
-        return self.add(SpikingRNN(units, cell=cell or self.cell, **merged))
+        return self.add(SpikingRNN(units, cell=cell or self.cell, **accepted))
 
     def add_dense(self, units, **kw):
         return self.add(Dense(units, **kw))
@@ -398,8 +505,7 @@ def explain_budget(model: Model, budget: Budget, batch: int = 32,
     A("  Larger than codecs, larger than offload:")
     A("    BPTT   -> Theta(T * A), memory GROWS with the horizon")
     A("    e-prop -> Theta(S),      T-INDEPENDENT")
-    from axplan.credit import (NeuronModel, compare, crossover_batch,
-                               local_quality)
+    from axplan.credit import NeuronModel, compare, crossover_batch, local_quality
     L_, h_ = max(1, len(spiking)), width
     cch = compare(NeuronModel.LIF, connections=conn, timesteps=T,
                   batch=batch, hidden=h_, n_layers=L_)
@@ -466,8 +572,8 @@ def explain_budget(model: Model, budget: Budget, batch: int = 32,
 
 def gate_report() -> tuple[bool, str]:
     """Run the gate and return (ok, output). Mandatory before any claim."""
-    import subprocess
     import os
+    import subprocess
     here = os.path.dirname(os.path.abspath(__file__))
     r = subprocess.run(
         ["python3", "-W", "ignore", os.path.join(here, "axon", "gate.py")],

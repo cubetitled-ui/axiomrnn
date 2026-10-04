@@ -1,0 +1,72 @@
+# The gate. This is the job that decides whether a change is allowed to land.
+#
+# It runs the same `tests/run_all.py` that a contributor runs locally, so "it
+# passed in CI" and "it passed for me" are the same statement rather than two.
+#
+# Split on purpose:
+#   lint  -- seconds, no TensorFlow, runs on every push
+#   gate  -- ~20 minutes and a ~600 MB TensorFlow download, so it does not run
+#            on every keystroke. It runs on main and before a release, which is
+#            when a green result is worth the minutes.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: python -m pip install --upgrade ruff
+      # Not `--fix`: a linter that quietly rewrites the code it is judging
+      # makes the check unfalsifiable. Report, and let a human decide.
+      - name: ruff
+        run: |
+          ruff check axiomrnn.py axon/ axplan/ axtf/ tests/
+      - name: The package must import with no TensorFlow installed
+        run: |
+          python -m pip install --no-deps .
+          python -c "import axplan, axon, axiomrnn; print('TF-free import OK')"
+
+  gate:
+    name: gate (29 suites)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      # The gate refuses to run a second copy at once (flock), so a stuck
+      # workflow cannot silently overlap another. It also reaps its whole
+      # process group on timeout: orphaned TensorFlow processes are what
+      # previously filled swap and froze the machine.
+      - name: Run the gate
+        run: python -u tests/run_all.py
+
+      - name: Keep the gate output as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-output
+          path: /tmp/gate-*.txt
+          if-no-files-found: ignore

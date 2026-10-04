@@ -31,6 +31,7 @@ THE FIVE RULES THIS EXAMPLE CHECKS
   4. Not one cause, but a decomposition into parts.
   5. "Not measured" instead of a plausible number.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -152,6 +153,22 @@ def run(kind, thr, epochs=12, batch=32, steps=6000, seed=0):
                 params=nparam)
 
 
+# Reduced settings for the test gate. The full run below is four model kinds
+# times a threshold sweep, at 6000 steps per epoch for 12 epochs -- several
+# hundred thousand steps. That is a measurement, not a smoke test, and putting
+# it in the gate made the gate unusable: it ran for eight minutes on one suite
+# and was still going.
+#
+# AX_FAST keeps every code path (all four kinds still build, train and predict,
+# and the decomposition at the end still runs) and shrinks only the amount of
+# training. What it gives up is a converged accuracy, which is not what the gate
+# is checking. The full sweep is what you run when you want the numbers.
+if os.environ.get("AX_FAST") == "1":
+    STEPS, EPOCHS = 300, 2
+else:
+    STEPS, EPOCHS = 6000, 12
+
+
 print("=" * 76)
 print("HOW TO COMPARE HONESTLY")
 print("=" * 76)
@@ -175,7 +192,7 @@ for kind in ("dense", "spiking", "spiking_flat", "smooth"):
     grid = [None] if kind == "dense" else THRS
     best = None
     for thr in grid:
-        r = run(kind, thr)
+        r = run(kind, thr, epochs=EPOCHS, steps=STEPS)
         mark = "  <- keep" if (best is None or r["acc"] > best["acc"]) else ""
         lab = kind if thr is None else f"{kind} thr={thr}"
         print(f"    {lab:<22} train {r['train']:.4f}  "

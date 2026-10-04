@@ -14,10 +14,11 @@ The checks below catch that class in seconds. Run:
 from __future__ import annotations
 
 import sys
+
 import numpy as np
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from lif import SpikingNet                                     # noqa: E402
+from lif import SpikingNet
 
 PASS, FAIL = [], []
 

@@ -1,0 +1,69 @@
+# Publish to PyPI by Trusted Publishing (OIDC).
+#
+# There is no API token here and that is deliberate. Trusted Publishing issues a
+# short-lived credential to this job based on who triggered it, which repository
+# it came from, and which environment it names. A long-lived token would have to
+# be stored as a repository secret, where it can leak through a log line, a
+# dependabot PR, or a compromised dependency's build step.
+#
+# PyPI matches the job to the publisher entry by three things, and all three must
+# agree or the upload is refused:
+#   owner         -> cubetiled-ui   (the repository owner)
+#   repository    -> axiomrnn
+#   workflow name -> publish        (this file's name, without the .yml)
+#   environment   -> pypi           (the job's `environment:` below)
+#
+# Consequence worth knowing: adding this file does NOT publish anything, and it
+# does NOT reserve the name. The project is created on PyPI the first time this
+# workflow actually runs and uploads.
+
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# The release build must not be able to publish from a repository the publisher
+# entry does not name. `id-token: write` is what lets this job exchange its
+# identity for a PyPI credential; without it the upload fails with 403.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    # Must match the "Environment name" field in the PyPI publisher form.
+    environment:
+      name: pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Build from the checked-out source rather than from dist/. A release must
+      # publish exactly what the tag contains, and reusing an artifact from an
+      # earlier local run is how a wheel and its sdist drift apart.
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Verify the artifacts before they are visible to anyone
+        run: |
+          python -m pip install --upgrade twine
+          twine check dist/*
+          ls -l dist/
+
+      # Attestations let a consumer verify the artifact really came from this
+      # repository and was not tampered with in transit.
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

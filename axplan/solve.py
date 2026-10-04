@@ -40,7 +40,6 @@ from dataclasses import dataclass
 
 from .memory import BudgetSpec, MemoryPlan, Precision, analyse
 
-
 # ── CANDIDATE ───────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)

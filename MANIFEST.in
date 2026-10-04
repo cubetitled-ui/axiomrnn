@@ -1,0 +1,35 @@
+# MANIFEST.in -- what the SDIST carries. The WHEEL is a different question and
+# is answered by [tool.setuptools.packages] in pyproject.toml.
+#
+# MEASURED before this file existed: the sdist held 30 files, and of the 14
+# repo paths the README tells a stranger to open --
+#   docs/GETTING_STARTED.md, docs/ARCHITECTURE.md, docs/DESIGN_LOG.md,
+#   docs/UX_RULES.md, docs/ATTACKING_THE_QUADRATIC.md,
+#   examples/01_minimal.py .. examples/05_t9.py,
+#   examples/advanced/15_what_to_build.py, examples/README.md,
+#   tests/run_all.py
+# -- it carried NONE. It also carried no CHANGELOG.md. An sdist that installs
+# and then tells you to run a file it does not contain is worse than no sdist:
+# it makes the README unfalsifiable from the tarball. So the sdist ships the
+# evidence paths, and the wheel stays lean (MEASURED: 12 .py + LICENSE).
+
+include LICENSE
+include README.md
+include CHANGELOG.md
+include pyproject.toml
+
+# The gate, and everything it needs to run. tests/run_all.py compiles
+# axcore/kernels.cpp with g++, so the .cpp has to travel with it.
+graft tests
+graft examples
+graft docs
+include axcore/kernels.cpp
+
+# 28 example files, of which several had a __pycache__/ beside them in the
+# working tree. Byte-compiled caches of someone else's machine are not a
+# deliverable.
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+global-exclude *.so
+prune build
+prune dist

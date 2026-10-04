@@ -6,6 +6,17 @@
 > planner it defends is now documented as almost always answering "no cuts".
 > For the current rules see [`UX_RULES.md`](UX_RULES.md); for what the code
 > does see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+>
+> **The code samples in this document do not run.** It is a design record, not
+> a tutorial, and its API was never shipped. `MEASURED` 2026-10-04 in a clean
+> install of the built wheel: `hasattr(ax, "explain")` is `False`,
+> `hasattr(ax, "Net")` is `False`, `hasattr(ax, "Cell")` is `False`,
+> `hasattr(ax, "Cost")` is `False`. So the "beginner, four lines" snippet at
+> line ~775 will raise `AttributeError` on its last line, and three of its four
+> names were never real. `ax.Budget(vram_gb=6.0)` *is* real
+> (`Budget.__init__(self, vram_gb, host_ram_gb=0.0, offload=False,
+> name='custom')`); the rest of that snippet is fiction. **Do not copy code
+> from this file.** Copy it from [`GETTING_STARTED.md`](GETTING_STARTED.md).
 
 ---
 

@@ -24,9 +24,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "axon"))
 
-import tensorflow as tf                                   # noqa: E402
-from axtf.cells import SpikingCell, SpikingRNNCell        # noqa: E402
-from lif import SpikingNet                                # noqa: E402
+import tensorflow as tf
+from lif import SpikingNet
+
+from axtf.cells import SpikingCell, SpikingRNNCell
 
 PASS, FAIL = [], []
 

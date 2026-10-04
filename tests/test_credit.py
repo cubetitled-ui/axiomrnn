@@ -14,8 +14,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from axplan.credit import (
-    CreditRule, NeuronModel, TRACE_BYTES, ADAM_BYTES_PER_PARAM,
-    FPTT_ACCURACY, credit_bytes, local_quality, compare, crossover_batch,
+    ADAM_BYTES_PER_PARAM,
+    FPTT_ACCURACY,
+    TRACE_BYTES,
+    CreditRule,
+    NeuronModel,
+    compare,
+    credit_bytes,
+    crossover_batch,
+    local_quality,
 )
 
 PASS, FAIL = [], []

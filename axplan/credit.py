@@ -49,9 +49,9 @@ evidence that e-prop scales to 1B.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
-import math
 
 
 class CreditRule(str, Enum):

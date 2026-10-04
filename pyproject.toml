@@ -1,5 +1,11 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+# MEASURED floor, not a guess: `project.license` as an SPDX *string* is PEP 639,
+# which setuptools implements from 77. Built against setuptools 76.0.0 (which
+# satisfied the previous `>=68` floor) and the build died with
+#   ValueError: invalid pyproject.toml config: `project.license`.
+# A floor that lies is worse than no floor: it turns into a stranger's
+# "invalid pyproject.toml" instead of a version error.
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -15,21 +21,36 @@ readme = "README.md"
 requires-python = ">=3.10"
 # SPDX-выражение вместо классификатора: классификатор License :: OSI
 # Deprecated начиная с PEP 639, и сборка об этом предупреждает.
-license = "MIT"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
+# Shown on the PyPI project page. Keep it in step with the LICENSE copyright
+# line: an artifact whose two attributions disagree is worse than one with
+# neither.
+authors = [
+    { name = "Cubetitled" },
+]
+maintainers = [
+    { name = "Cubetitled" },
+]
 # "neuroscience" was here and was removed: the package does not model
 # neuroscience. The neuron is a leaky integrator with a threshold -- an
 # engineering abstraction, not Hodgkin-Huxley, with no ion channels.
 keywords = [
     "spiking-neural-networks", "recurrent-neural-networks",
-    "memory-planning", "keras", "tensorflow", "neuromorphic",
+    "memory-planning", "keras", "tensorflow",
 ]
+# "neuromorphic" was here and was removed for the same reason "neuroscience"
+# was: `axiomrnn-explain` prints, under NOT measured, "energy: no neuromorphic
+# device was used, ever". Advertising a keyword our own output disclaims is the
+# kind of thing a stranger screenshots.
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
@@ -43,14 +64,25 @@ classifiers = [
 # ─────────────────────────────────────────────────────────────────────────────
 dependencies = [
     "numpy>=1.24",
+    # TensorFlow is required, not optional.
+    #
+    # It was an extra once, on the reasoning that the memory planner should stay
+    # usable without a deep learning framework. That was true and it is still
+    # true -- `import axiomrnn` works with numpy alone, and `axplan`/`axon` have
+    # no TensorFlow dependency at all. But it made the default install a package
+    # that could not do its main job: `pip install axiomrnn` gave you a working
+    # spiking framework you could not build a single spiking layer with. The
+    # planner kept working; everything else refused on first use.
+    #
+    # A framework whose headline feature needs a dependency should require that
+    # dependency. Someone who only wants memory numbers can still import
+    # `axplan` alone, and that is now documented as the supported light path.
+    "tensorflow>=2.16",
 ]
 
 [project.optional-dependencies]
-# Обучение и сборка в Keras. Ставится как:  pip install axiomrnn[tf]
-tf = [
-    "tensorflow>=2.16",
-]
-# То же, но с CUDA. Версию CUDA выбирает TensorFlow, а не пакет.
+# A CUDA-enabled TensorFlow. The CUDA version is chosen by TensorFlow, not here,
+# so this extra only exists to say "give me the GPU build".
 tf-gpu = [
     "tensorflow[and-cuda]>=2.16",
 ]
@@ -62,9 +94,14 @@ dev = [
 # ТОЧКА ВХОДА ОДНА.
 #
 # import axiomrnn as ax
-#     ax.Model(...)      архитектура
-#     ax.Budget(...)     бюджет памяти
-#     ax.explain(...)    «что ты можешь выучить»
+#     ax.Model(...)        архитектура
+#     ax.Budget(...)       бюджет памяти
+#     ax.explain_budget(...)  «что ты можешь выучить»
+#
+# ax.explain DOES NOT EXIST -- measured on the installed wheel:
+#   hasattr(ax, "explain") -> False;  hasattr(ax, "explain_budget") -> True
+# The method form is m.explain(budget) on a Model. docs/DESIGN_LOG.md:776 still
+# prints `ax.explain(net)`; that line is wrong and is not this file's to fix.
 #
 # axplan / axtf / axon — внутренние пакеты. Они доступны (для расширения),
 # но документированный интерфейс — axiomrnn.
@@ -75,6 +112,8 @@ axiomrnn-explain = "axiomrnn:main_explain"
 [project.urls]
 Documentation = "https://github.com/timatigoogl3-code/axiomrnn#readme"
 Source = "https://github.com/timatigoogl3-code/axiomrnn"
+Issues = "https://github.com/timatigoogl3-code/axiomrnn/issues"
+Changelog = "https://github.com/timatigoogl3-code/axiomrnn/blob/main/CHANGELOG.md"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # УПАКОВКА.

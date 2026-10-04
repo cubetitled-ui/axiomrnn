@@ -163,7 +163,7 @@ def main():
     tok_out = km.predict(np.array([[1, 2, 3, 4, 5, 6]], dtype="int32"),
                          verbose=0)
     check("spiking layer emits binary values",
-          np.all((spikes[0].kernel.numpy() != 0)), "kernel is non-zero")
+          np.all(spikes[0].kernel.numpy() != 0), "kernel is non-zero")
 
     print()
     print("=" * 74)

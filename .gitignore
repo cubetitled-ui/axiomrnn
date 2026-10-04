@@ -14,5 +14,10 @@ htmlcov/
 .idea/
 .vscode/
 
-# собирается тестом во временный файл
+# Lock file created by the gate at run time. It records which pid holds the
+# gate; the file's contents are stale the moment that process exits, so
+# committing it would put a dead pid in every clone.
+tests/.gate.lock
+
+# Built by the C++ suite into a temporary path, never into the tree.
 axcore/kernels

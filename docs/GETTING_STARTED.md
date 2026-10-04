@@ -1,25 +1,46 @@
 # Getting started
 
-Ten minutes from nothing to a budgeted model. No neuromorphic background
-assumed.
+Five minutes to a budgeted model and a firing neuron, with no TensorFlow
+background and no framework background assumed.
+
+Every figure here was produced on **2026-10-04** by the command shown. See
+[`../README.md`](../README.md) for what this project does **not** claim — read
+that first.
 
 ---
 
 ## Install
 
 ```bash
-pip install axiomrnn            # core, numpy only -- planning works
-pip install axiomrnn[tf]        # + TensorFlow/Keras for training
-pip install axiomrnn[tf-gpu]    # + CUDA
+# There is no PyPI release. `pip install axiomrnn` does not work.
+git clone <this repository>
+cd axiomrnn
 ```
 
-Check what landed:
+Nothing to install for the planning path. It runs on a bare `python3` with
+NumPy.
+
+If you want to train, you need TensorFlow, and **TensorFlow has no build for
+Python 3.14** — so you need a Python 3.12-or-older environment. `MEASURED`:
+`/usr/bin/python3 -V` on the reference machine is `Python 3.14.4`; the
+TensorFlow environment there is `Python 3.12.13` with TensorFlow `2.21.0`.
+TensorFlow is a large install: `1.9 GB` for the `tensorflow` package alone.
+
+Check what you have:
 
 ```bash
-python3 -c "import axiomrnn as ax; print('TF:', ax._HAS_TF)"
+python3 -c "import axiomrnn as ax; print('TF:', ax._HAS_TF, '| err:', ax._TF_ERR)"
 ```
 
-`False` is fine and expected. The planner does not need TensorFlow.
+`TF: False` is fine and expected. `ax.SpikingCell` is then `None` rather than a
+crash — that is the documented soft-fail.
+
+**A locally built wheel exists but is not published.**
+`dist/axiomrnn-0.1.0-py3-none-any.whl` (58,298 bytes) installs into a clean
+TensorFlow-free environment and its console script `axiomrnn-explain` runs;
+both were verified on 2026-10-03/04. Until it is on an index this file does not
+tell you to install it, and `pip install axiomrnn` will fail or fetch somebody
+else's project.
 
 ---
 
@@ -41,15 +62,19 @@ You get, among other things:
 ```
   WHAT IT COSTS IN MEMORY
     regime:        activation
+    tape share:    98.6% <-- tape dominates
     peak:          0.78 GiB of 6 GiB
 
   THE MAIN MEMORY LEVER: THE CREDIT RULE
-    now: BPTT, 0.016 GiB
+    now: BPTT, 0.063 GiB
     e-prop LIF: 0.008 GiB (0.50x Adam -- cheaper than momentum)
-    batch crossover: batch* = 16
+    batch crossover: batch* = 4
+    -> at batch=32 the local rule is ALREADY cheaper.
 ```
 
-That is arithmetic. Nothing imported TensorFlow to produce it.
+`MEASURED` — `python3 examples/02_budget.py`, exit 0 in 0.04 s on Python
+3.14.4 with no TensorFlow installed. That is arithmetic. Nothing imported
+TensorFlow to produce it.
 
 ## 1b. The other direction: what should you build?
 
@@ -111,22 +136,30 @@ model = spec.keras_model(
 model.fit(X, y, epochs=12, batch_size=64)
 ```
 
-Measured on this machine: accuracy **0.9967** against a 0.25 baseline.
+`MEASURED` — the equivalent shipped script, `examples/01_minimal.py`, reaches
+held-out accuracy **0.9983** against a 0.25 baseline in 75 s on CPU
+(`0.9983` standalone, `0.9975` as a gate suite on a busier machine — the
+difference is run-to-run variance on a 1,200-example held-out set, which is why
+a single run should never be quoted as a constant).
 
 ### Three Keras 3 things that will bite you
 
-**Use `batch_shape`, not `shape`.** `Input(shape=(T, D))` leaves the time
-axis `None`, and our layer cannot derive its horizon from it. The error is
-"horizon T is unknown", and the fix is `batch_shape=(None, T, D)`.
+**Use `batch_shape`, not `shape`.** `Input(shape=(T, D))` leaves the time axis
+`None`, and our layer cannot derive its horizon from it. The historical error
+was `ValueError: the layer needs a horizon and shape=(16, 12) leaves the time
+axis None`; the fix is `batch_shape=(None, T, D)`.
 
-**`from_logits=True` is mandatory.** Our output *is* logits. Keras defaults
-to expecting probabilities and applies softmax itself. Measured: a double
-softmax costs you 2.4341 against the correct 1.4414.
+**`from_logits=True` is mandatory.** Our output *is* logits. Keras defaults to
+expecting probabilities and applies softmax itself. `MEASURED` — with
+`from_logits=False` the loss after one epoch is **9.8438**; the correct
+configuration is around 1.44 and never stalls above `ln(4) = 1.386`.
 
-**`run_eagerly=True` is not optional.** Our forward pass is a Python loop
-over time, and Keras 3 caches the result instead of recomputing it. The
-gradient then applies to stale activations and the loss saturates at
-`ln(C) = 1.386`. `compile_model=True` sets it for you.
+**`run_eagerly=True` is not optional.** Our forward pass is a Python loop over
+time, and Keras 3 caches the result instead of recomputing it. The gradient
+then applies to stale activations. `MEASURED` — with a call counter: the
+forward ran 2 times where 4 were needed, and 0 times on a repeat fit.
+`compile_model=True` sets `run_eagerly=True` for you. The proper fix is a
+`tf.while_loop`; it is not done, and it costs speed on purpose.
 
 ## 3. Calibrate, or it will not train
 
@@ -173,10 +206,22 @@ stay *verified*.
 python3 tests/run_all.py
 ```
 
+`MEASURED` — 2026-10-04, exit 0, 21 min 12 s wall clock, **28 suites**,
+**269 declared checks** across the seven suites that report a count.
+
 The gate compares the analytic gradient against finite differences on the
-smooth model and demands `rel.err ≤ 1e-8`. It is not ceremony — it caught
-five real backward-pass bugs, and later caught a `norm_t` parameter that
-had been threaded through four signatures and never applied.
+*smoothed* model — the live run reports `median rel.err 1.02e-08, worst
+3.41e-07` over 74 points — and separately checks that the gradient does not
+grow with the horizon (`T=16/T=4 = 1.18` with normalisation, `5.40` without).
+It is not ceremony: it is what caught a `norm_t` parameter that had been
+threaded through four signatures and never applied, and a backward pass that
+read `cell.leak` as a membrane derivative.
+
+Two limits of the gate, so you read it correctly: nineteen of the twenty
+examples are suites and prove only that the process exited 0, because
+`tests/run_all.py:150-154` filters their output away; and
+`examples/04_equal_budget.py` — the spiking-versus-dense comparison — is not a
+suite at all.
 
 ## Where to go next
 

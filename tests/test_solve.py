@@ -14,13 +14,13 @@ narrower and checkable:
 
 No quality claim is tested here because the package makes none (UX_RULES 10).
 """
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from axplan.solve import (largest_that_fits, frontier, make_spec,   # noqa
                           _ascending, _descending, Candidate)
-from axplan.memory import analyse   # noqa
+from axplan.memory import analyse
 
 PASS, FAIL = [], []
 

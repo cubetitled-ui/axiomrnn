@@ -92,7 +92,7 @@ def build_keras(spec, inputs=None, outputs=None, compile_model=False,
     outputs   : number of classes; None -> no output layer
     readout   : 'flatten' (default, measured better) or 'mean'
     """
-    from axiomrnn import SpikingRNN, Dense
+    from axiomrnn import Dense, SpikingRNN
 
     if inputs is None:
         inputs = keras.Input(shape=(None, None), name="input")

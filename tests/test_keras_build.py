@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tensorflow as tf
 from tensorflow import keras
+
 import axiomrnn as ax
 from axtf.build import build_keras, calibrate_model, measure_model
 
@@ -252,7 +253,7 @@ def test_output_shape_keeps_time_axis():
 
     Here we check exactly what used to break.
     """
-    from axtf.cells import _as_shape, SpikingRNNCell, SpikingCell
+    from axtf.cells import SpikingCell, SpikingRNNCell, _as_shape
 
     # batch None plus a known T: the case that used to get lost
     check("_as_shape((None,16,24)) -> (None,16,24)",

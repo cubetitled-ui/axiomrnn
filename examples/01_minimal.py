@@ -31,6 +31,7 @@ second", and so on. If the network averages everything over time the
 label disappears. This is exactly the case where a spiking network must
 hold on to TIME, and it is the case where we caught our own readout bug.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -156,20 +157,47 @@ print("=" * 66)
 
 # ═════════════════════════════════════════════════════ THE GATE IS MANDATORY ══
 #
-# AFTER any result, run the gate. It checks what the eye cannot see: does
-# the gradient match the numerical one (to 1e-8 in our case), does the
-# network learn 32 examples, is credit truncation intact.
+# BEFORE YOU CONCLUDE ANYTHING from what you just saw, run the gate:
 #
-# None of that is needed to RUN a network. It is needed so you never have
-# to run one IN PRODUCTION.
+#     python3 tests/run_all.py
+#
+# It checks what the eye cannot see: does the gradient match the numerical one
+# (to 1e-8 in our case), does the network learn 32 examples, is credit
+# truncation intact.
+#
+# It is deliberately NOT run automatically here, for two reasons.
+#
+# First, running a network and concluding from it are different activities.
+# This file's job is to get you to a firing neuron in under five minutes; the
+# gate's job is to license a claim, and it takes far longer than that. Fusing
+# them made the first example as slow as the entire test suite.
+#
+# Second, and more seriously: tests/run_all.py runs THIS file as one of its
+# suites. An automatic gate call here meant that running the gate re-entered
+# this file, which re-entered the gate. It was stopped by a lock rather than by
+# design, and a lock that stops it is not the same as a program that cannot
+# start it.
+#
+# Set AX_RUN_GATE=1 to run it from here anyway.
 print()
-print("Gate (mandatory before any conclusion):")
-import subprocess
+_here = Path(__file__).resolve().parent
+_gate_cmd = f'{sys.executable} "{_here.parent / "tests" / "run_all.py"}"'
 
-HERE = Path(__file__).resolve().parent
-gate = subprocess.run(
-    [sys.executable, str(HERE.parent / "tests" / "run_all.py")],
-    capture_output=True, text=True,
-)
-print(gate.stdout[-900:] if gate.stdout else gate.stderr[-900:])
-print("return code:", gate.returncode)
+if os.environ.get("AX_RUN_GATE") == "1":
+    import subprocess
+
+    print("Gate (mandatory before any conclusion):")
+    gate = subprocess.run(
+        [sys.executable, str(_here.parent / "tests" / "run_all.py")],
+        capture_output=True, text=True,
+    )
+    print(gate.stdout[-900:] if gate.stdout else gate.stderr[-900:])
+    print("return code:", gate.returncode)
+else:
+    print("NEXT, before you conclude anything from the result above:")
+    print(f"    {_gate_cmd}")
+    print()
+    print("That is the gate. It is mandatory before a conclusion, and it is not")
+    print("run from here on purpose -- this file runs inside it, so calling it")
+    print("automatically would make the two call each other. Run it yourself,")
+    print("or set AX_RUN_GATE=1.")

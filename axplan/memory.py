@@ -14,9 +14,10 @@ Tests: axiomrnn/tests/test_memory.py (31 tests, green)
 """
 
 from __future__ import annotations
+
+import math
 from dataclasses import dataclass, field
 from enum import Enum
-import math
 
 # Passed to credit.py to avoid a circular import
 _LOCAL = 'local'
@@ -183,7 +184,7 @@ class CreditModel:
                 f"(a contribution > {1e-3:.0e} decays within {k}).")
 
     @staticmethod
-    def from_surrogate(name: str, param: float, lam: float = 0.9) -> "CreditModel":
+    def from_surrogate(name: str, param: float, lam: float = 0.9) -> CreditModel:
         """max|S'| table for the real surrogates.
 
         Verified: snnTorch FastSigmoid(slope=25) -> 0.5
