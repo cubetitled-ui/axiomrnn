@@ -27,9 +27,16 @@ on:
 # The release build must not be able to publish from a repository the publisher
 # entry does not name. `id-token: write` is what lets this job exchange its
 # identity for a PyPI credential; without it the upload fails with 403.
+#
+# `attestations: write` is separate and was missing: the build and the twine
+# check both passed on the first run and the job still failed, at
+# "Generate attestations", with "Failed to persist attestation: Resource not
+# accessible by integration". Least privilege is only worth anything if it is
+# correct; a permission that is missing is a red build, not safety.
 permissions:
   contents: read
   id-token: write
+  attestations: write
 
 jobs:
   publish:
