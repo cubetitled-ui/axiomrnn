@@ -15,10 +15,25 @@ build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────────────────────────────────────
 [project]
 name = "axiomrnn"
-version = "0.1.0"
+version = "0.1.1"
 description = "Design networks for the memory budget you have: a pure-python planner, plus an extendable recurrent/spiking kernel with verified gradients"
 readme = "README.md"
-requires-python = ">=3.10"
+# Capped below 3.14, and the cap is measured rather than guessed.
+#
+# 0.1.0 declared ">=3.10" with tensorflow>=2.16 as a hard dependency, and that
+# combination cannot install on Python 3.14: TensorFlow 2.21.0, the current
+# stable, ships cp310-cp313 wheels only. The first 3.14 wheel appears in 2.22.0rc0,
+# a release candidate. So on 3.14 pip reports
+#
+#   ERROR: Could not find a version that satisfies the requirement tensorflow>=2.16
+#   (from versions: 2.22.0rc0)
+#
+# which reads like a broken package rather than an unsupported interpreter.
+#
+# The gate itself still runs its non-TensorFlow suites on 3.14, so 3.14 is a
+# supported interpreter for the planner; it just cannot be one for this package
+# while TensorFlow is a required dependency.
+requires-python = ">=3.10,<3.14"
 # SPDX-выражение вместо классификатора: классификатор License :: OSI
 # Deprecated начиная с PEP 639, и сборка об этом предупреждает.
 license = "Apache-2.0"

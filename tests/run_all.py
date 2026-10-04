@@ -12,6 +12,7 @@ Suites that NEED TensorFlow are marked and skipped with an explicit
 notice -- skipping silently is not allowed.
 """
 import fcntl
+import shutil
 import os
 import signal
 import subprocess
@@ -22,8 +23,50 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 PY = sys.executable
-# separate venv holding TF: TF has no build for 3.14, lives in .venvs/ax
-TF_PY = "/home/cune/.venvs/ax/bin/python"
+
+
+def find_tensorflow_python():
+    """Return an interpreter that can actually import tensorflow, or None.
+
+    This used to be a hardcoded path to one machine's virtualenv. On any other
+    machine -- including every GitHub runner -- that path does not exist, so
+    every TensorFlow suite was reported SKIPPED and the gate still came back
+    green. A check that cannot run was indistinguishable from a check that
+    passed, which is the one failure mode this gate exists to prevent.
+
+    So the interpreter is discovered, and a candidate is only accepted once it
+    has been seen to import tensorflow. Order matters: the interpreter running
+    the gate is tried first, then the usual virtualenv locations.
+    """
+    import subprocess
+
+    candidates = [
+        sys.executable,
+        os.path.join(ROOT, ".venv", "bin", "python"),
+        os.path.join(ROOT, "venv", "bin", "python"),
+        shutil.which("python3") or "python3",
+    ]
+    # Keep order, drop repeats: two candidates can resolve to one interpreter.
+    seen, ordered = set(), []
+    for c in candidates:
+        if c and c not in seen:
+            seen.add(c)
+            ordered.append(c)
+
+    for cand in ordered:
+        try:
+            done = subprocess.run(
+                [cand, "-c", "import tensorflow"],
+                capture_output=True, timeout=180,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if done.returncode == 0:
+            return cand
+    return None
+
+
+TF_PY = find_tensorflow_python()
 
 SUITES = [
     ("GATE (numpy core, gradient proven)", ["python3", "-W", "ignore",
@@ -185,9 +228,18 @@ def run(name, argv, need_tf, expect=None):
     print(name)
     print("=" * 74)
     exe = argv[0]
-    if need_tf and not os.path.exists(exe):
-        print(f"  SKIPPED: {exe} not found")
-        print("  Only this suite needs TensorFlow. axplan works without it.")
+    if need_tf and (TF_PY is None or not os.path.exists(exe)):
+        # Wording matters more than usual here. The previous version printed
+        # "Only this suite needs TensorFlow", which is true of one suite and
+        # false of the twenty that follow: on a machine with no TensorFlow the
+        # gate skipped most of itself and still came back green. It now says how
+        # many suites are being skipped, because a skipped suite is a check that
+        # did not run.
+        print(f"  SKIPPED: no interpreter with TensorFlow was found (looked for "
+              f"tensorflow in {sys.executable} and ./.venv/bin/python)")
+        print("  This is NOT a pass. The suites needing TensorFlow did not run, and")
+        print("  the gate below will say how many. Install it with:")
+        print("      pip install -e '.[dev]'")
         return "SKIP"
     t0 = time.time()
     # The suite gets its own session so the gate owns its whole process tree.
@@ -305,11 +357,28 @@ def main():
         mark = {"OK": "  OK  ", "FAIL": " FAIL", "SKIP": "SKIP"}[st]
         print(f"  [{mark}] {name}")
     bad = [n for n, s in results if s == "FAIL"]
+    skipped = [n for n, s in results if s == "SKIP"]
     print("=" * 74)
+    if skipped:
+        # Reported separately from failures because it used to be invisible. A
+        # hardcoded interpreter path meant that on any other machine every
+        # TensorFlow suite was skipped, and the gate still printed ALL GREEN
+        # with exit 0. A suite that did not run is not a suite that passed.
+        print(f"  SKIPPED: {len(skipped)} of {len(results)}. These did not run:")
+        for n in skipped:
+            print(f"      {n}")
+        print()
+        print("  ALL GREEN below means: everything that ran, passed. It does NOT")
+        print("  mean the gate is complete.")
+        print("=" * 74)
+        if bad:
+            print(f"  FAILURES: {len(bad)}. Nothing may be published.")
+            return 1
+        return 2
     if bad:
         print(f"  FAILURES: {len(bad)}. Nothing may be published.")
         return 1
-    print("  ALL GREEN. Results may be published.")
+    print("  ALL GREEN. Every suite ran. Results may be published.")
     return 0
 
 
