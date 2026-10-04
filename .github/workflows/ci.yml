@@ -42,7 +42,7 @@ jobs:
           python -c "import axplan, axon, axiomrnn; print('TF-free import OK')"
 
   gate:
-    name: gate (29 suites)
+    name: gate (all suites)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
